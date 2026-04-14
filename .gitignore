@@ -1,0 +1,5 @@
+backend/node_modules/
+runtime/
+bin/*.exe
+bin/cpu_blur
+bin/gpu_blur

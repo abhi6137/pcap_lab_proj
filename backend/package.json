@@ -1,0 +1,14 @@
+{
+  "name": "cuda-gaussian-blur-backend",
+  "version": "1.0.0",
+  "description": "Backend API for CPU/GPU Gaussian blur performance comparison",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "multer": "^2.1.1"
+  }
+}
