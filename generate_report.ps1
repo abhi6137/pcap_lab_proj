@@ -95,8 +95,8 @@ $lines = @(
     @{ t = "Mini-Project Report"; b = $true; c = $true },
     @{ t = ""; b = $false; c = $false },
     @{ t = "Author: Abhinav Mohapatra"; b = $false; c = $true },
-    @{ t = "Affiliation: Department of Computer Science and Engineering"; b = $false; c = $true },
-    @{ t = "Project Guide: To be updated as per institute record"; b = $false; c = $true },
+    @{ t = "Affiliation: Department of Computer Science and Engineering, Manipal Institute of Technology, Manipal, Karnataka - 576104"; b = $false; c = $true },
+    @{ t = "Project Guide: <<Name of the Internal Guide>>, <<Designation of the internal guide>>"; b = $false; c = $true },
     @{ t = "Date: 14 April 2026"; b = $false; c = $true },
     @{ t = ""; b = $false; c = $false },
 
