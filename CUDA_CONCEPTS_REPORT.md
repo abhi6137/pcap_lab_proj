@@ -102,13 +102,5 @@ This document lists the CUDA concepts implemented in this project, where they ap
   - `nvcc` is required to compile `.cu` CUDA source.
   - Makes the CUDA executable reproducible across environments.
 
-## CUDA Concepts Not Used (Useful to Mention to Professor)
-These are common CUDA topics but they are not implemented in this project:
-- CUDA streams / asynchronous overlap (`cudaMemcpyAsync`, multiple streams)
-- Unified memory (`cudaMallocManaged`)
-- Pinned host memory
-- Texture/surface memory
-- Atomics and reductions
-- Multi-GPU execution
 
 This is acceptable because the project goal is focused on single-image blur acceleration and shared-memory tiling optimization fundamentals.

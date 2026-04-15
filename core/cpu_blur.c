@@ -20,7 +20,7 @@ static int clamp_int(int value, int low, int high) {
     return value;
 }
 
-void gaussian_blur_cpu(const unsigned char* input, unsigned char* output, int width, int height) {
+static void gaussian_blur_pass(const unsigned char* input, unsigned char* output, int width, int height) {
     int y = 0;
     int x = 0;
 
@@ -42,6 +42,20 @@ void gaussian_blur_cpu(const unsigned char* input, unsigned char* output, int wi
             output[y * width + x] = (unsigned char)(sum + 0.5f);
         }
     }
+}
+
+void gaussian_blur_cpu(const unsigned char* input, unsigned char* output, int width, int height) {
+    size_t pixel_count = (size_t)width * (size_t)height;
+    unsigned char* temp = (unsigned char*)malloc(pixel_count);
+
+    if (temp == NULL) {
+        return;
+    }
+
+    gaussian_blur_pass(input, temp, width, height);
+    gaussian_blur_pass(temp, output, width, height);
+
+    free(temp);
 }
 
 int main(int argc, char** argv) {

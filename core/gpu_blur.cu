@@ -9,6 +9,7 @@
 #define BLOCK_SIZE 16
 #define KERNEL_RADIUS 1
 #define KERNEL_WIDTH 3
+#define BLUR_PASSES 2
 
 #define CUDA_CHECK(call)                                                                      \
     do {                                                                                      \
@@ -143,20 +144,39 @@ __global__ void gaussianBlurTiled(const unsigned char* input, unsigned char* out
 }
 
 static void gaussian_blur_cpu_ref(const unsigned char* input, unsigned char* output, int width, int height) {
-    for (int y = 0; y < height; ++y) {
-        for (int x = 0; x < width; ++x) {
-            float sum = 0.0f;
-            for (int ky = -KERNEL_RADIUS; ky <= KERNEL_RADIUS; ++ky) {
-                for (int kx = -KERNEL_RADIUS; kx <= KERNEL_RADIUS; ++kx) {
-                    int ix = clamp_host(x + kx, 0, width - 1);
-                    int iy = clamp_host(y + ky, 0, height - 1);
-                    float weight = H_GAUSSIAN_3X3[(ky + KERNEL_RADIUS) * KERNEL_WIDTH + (kx + KERNEL_RADIUS)];
-                    sum += weight * input[iy * width + ix];
+    size_t pixel_count = (size_t)width * (size_t)height;
+    unsigned char* temp = (unsigned char*)malloc(pixel_count);
+
+    if (temp == NULL) {
+        return;
+    }
+
+    const unsigned char* current_input = input;
+    unsigned char* current_output = temp;
+
+    for (int pass = 0; pass < BLUR_PASSES; ++pass) {
+        for (int y = 0; y < height; ++y) {
+            for (int x = 0; x < width; ++x) {
+                float sum = 0.0f;
+                for (int ky = -KERNEL_RADIUS; ky <= KERNEL_RADIUS; ++ky) {
+                    for (int kx = -KERNEL_RADIUS; kx <= KERNEL_RADIUS; ++kx) {
+                        int ix = clamp_host(x + kx, 0, width - 1);
+                        int iy = clamp_host(y + ky, 0, height - 1);
+                        float weight = H_GAUSSIAN_3X3[(ky + KERNEL_RADIUS) * KERNEL_WIDTH + (kx + KERNEL_RADIUS)];
+                        sum += weight * current_input[iy * width + ix];
+                    }
                 }
+                current_output[y * width + x] = (unsigned char)(sum + 0.5f);
             }
-            output[y * width + x] = (unsigned char)(sum + 0.5f);
+        }
+
+        if (pass == 0) {
+            current_input = temp;
+            current_output = output;
         }
     }
+
+    free(temp);
 }
 
 static double compute_mae(const unsigned char* a, const unsigned char* b, size_t n) {
@@ -182,6 +202,7 @@ int main(int argc, char** argv) {
     Image output = {0, 0, NULL};
 
     unsigned char* d_input = NULL;
+    unsigned char* d_temp = NULL;
     unsigned char* d_output = NULL;
 
     cudaEvent_t start_event = NULL;
@@ -223,6 +244,7 @@ int main(int argc, char** argv) {
 
     CUDA_CHECK(cudaMemcpyToSymbol(D_GAUSSIAN_3X3, H_GAUSSIAN_3X3, sizeof(H_GAUSSIAN_3X3)));
     CUDA_CHECK(cudaMalloc((void**)&d_input, pixel_count));
+    CUDA_CHECK(cudaMalloc((void**)&d_temp, pixel_count));
     CUDA_CHECK(cudaMalloc((void**)&d_output, pixel_count));
 
     CUDA_CHECK(cudaMemcpy(d_input, input.data, pixel_count, cudaMemcpyHostToDevice));
@@ -237,9 +259,13 @@ int main(int argc, char** argv) {
     CUDA_CHECK(cudaEventRecord(start_event));
 
     if (strcmp(mode, "gpu_basic") == 0) {
-        gaussianBlurBasic<<<grid, block>>>(d_input, d_output, input.width, input.height);
+        gaussianBlurBasic<<<grid, block>>>(d_input, d_temp, input.width, input.height);
+        CUDA_CHECK(cudaGetLastError());
+        gaussianBlurBasic<<<grid, block>>>(d_temp, d_output, input.width, input.height);
     } else {
-        gaussianBlurTiled<<<grid, block>>>(d_input, d_output, input.width, input.height);
+        gaussianBlurTiled<<<grid, block>>>(d_input, d_temp, input.width, input.height);
+        CUDA_CHECK(cudaGetLastError());
+        gaussianBlurTiled<<<grid, block>>>(d_temp, d_output, input.width, input.height);
     }
 
     CUDA_CHECK(cudaGetLastError());
@@ -254,6 +280,7 @@ int main(int argc, char** argv) {
         cudaEventDestroy(start_event);
         cudaEventDestroy(stop_event);
         cudaFree(d_input);
+        cudaFree(d_temp);
         cudaFree(d_output);
         free_image(&output);
         free_image(&input);
@@ -277,6 +304,7 @@ int main(int argc, char** argv) {
     cudaEventDestroy(start_event);
     cudaEventDestroy(stop_event);
     cudaFree(d_input);
+    cudaFree(d_temp);
     cudaFree(d_output);
     free_image(&output);
     free_image(&input);

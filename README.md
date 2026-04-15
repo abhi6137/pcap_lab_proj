@@ -8,6 +8,8 @@ This mini project demonstrates three implementations of Gaussian blur:
 
 The project also includes a web interface and backend API to run each mode and compare performance.
 
+The image processing pipeline applies the 3x3 Gaussian blur twice, which keeps the blur Gaussian in shape while producing a more noticeable result.
+
 ## Project Structure
 
 core/
@@ -32,7 +34,7 @@ Other files:
 ## CUDA Tiling Summary
 
 - Block size: 16x16
-- Convolution kernel: 3x3 Gaussian
+- Convolution kernel: 3x3 Gaussian, applied twice for stronger blur
 - Shared tile size: (BLOCK_SIZE + 2) x (BLOCK_SIZE + 2)
 - Extra border is the halo region required by neighboring pixels
 - __syncthreads() ensures all tile and halo values are available before convolution
